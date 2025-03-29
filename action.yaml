@@ -144,7 +144,7 @@ runs:
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
         echo "rearm_build_status=complete " >> $GITHUB_ENV
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@master
+      uses: relizaio/rearm-add-release@main
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
