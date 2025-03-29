@@ -156,9 +156,10 @@ runs:
         rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
         rearm_build_status: $rearm_build_status
         commit_list: $COMMIT_LIST
-        deliverable_type: File
+        deliverable_type: FILE
         rearm_component_id: ${{inputs.rearm_component_id}}
         enable_sbom: ${{inputs.enable_sbom}}
+        source_code_sbom_type: helm
         registry_username: ${{inputs.registry_username}}
         registry_password: ${{inputs.registry_password}}
         registry_host: ${{inputs.registry_host}}
