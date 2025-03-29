@@ -1,0 +1,165 @@
+name: 'ReARM Version and Publish Helm Chart Action'
+description: 'GitHub Action to version and publish helm chart to an OCI compliant registry and submit the release metadata to ReARM.'
+branding:
+  icon: 'anchor'
+  color: 'green'
+inputs:
+  registry_username:
+    description: "Username for chart repository"
+    required: true
+  registry_password:
+    description: "Password for chart repository"
+    required: true
+  registry_host:
+    description: "Host for chart repository"
+    required: true
+  helm_chart_name:
+    description: "Name of the helm chart"
+    required: true
+  rearm_api_id:
+    description: "ReARM API ID"
+    required: true
+  rearm_api_key:
+    description: "ReARM API KEY"
+    required: true
+  rearm_api_url:
+    description: "ReARM API URL"
+    required: true
+    default: 'https://demo.rearmhq.com'
+  path:
+    description: "Path to the relative to root of the repo (default is '.')"
+    required: false
+    default: .
+  ci_metadata:
+    description: "Metadata for CI run, (Optional - default is GitHub)"
+    required: false
+    default: "GitHub"
+  rearm_component_id:
+    description: "Component UUID for this repository if org-wide key is used"
+    required: false
+  registry_type:
+    description: "Type of registry, [OCI | ECR | CHARTMUSEUM - default is OCI]"
+    required: false
+    default: OCI
+  aws_region:
+    description: "AWS region, required when registry type is ECR"
+    required: false
+  enable_sbom:
+    required: false
+    default: 'false'
+    description: Generates SBOM and stores it along with the artifact
+runs:
+  using: "composite"
+  steps:
+    - id: setup-rearm
+      name: setup-rearm
+      uses: relizaio/setup-rearm-cli-action@main
+      with: 
+        version: 25.03.0
+    - name: Display rearm version
+      shell: bash
+      run: rearm version
+    - id: get-version
+      name: Get Version
+      uses: relizaio/rearm-get-version@main
+      with: 
+        rearm_api_id: ${{ inputs.rearm_api_id }}
+        rearm_api_key: ${{ inputs.rearm_api_key }}
+        rearm_api_url: ${{inputs.rearm_api_url}}
+        path: ${{inputs.path}}/${{inputs.helm_chart_name}}
+        rearm_component_id: ${{inputs.rearm_component_id}}
+    - name: Instantiate Lifecycle as Rejected to handle possible build failure
+      shell: bash
+      run: |
+        echo "rearm_build_status=rejected" >> $GITHUB_ENV
+        echo "REARM_DO_BUILD=${{ steps.get-version.outputs.REARM_DO_BUILD}}" >> $GITHUB_ENV
+    - name: Build and push Helm Chart to Registry
+      shell: bash
+      if: ${{env.REARM_DO_BUILD == 'true'}}
+      continue-on-error: true
+      run: |
+        cd ${{ inputs.path }}
+        # update version on the chart
+        sed -i "/^version: /s/.*/version: ${{ steps.get-version.outputs.rearm_full_version }}/" ${{inputs.helm_chart_name}}/Chart.yaml
+        
+        # git commit and update
+        git config --global user.name 'reliza-auto'
+        git config --global user.email 'info@reliza.io'
+        git add ${{inputs.helm_chart_name}}/Chart.yaml
+        git commit -m "chore: bump helm chart version to ${{ steps.get-version.outputs.rearm_full_version }} [skip ci]"
+        git push
+        commit_sha=$(git log -1 --pretty='%H')
+        
+        if [ ! -z "${{ steps.get-version.outputs.rearm_last_commit }}" ]
+        then
+          commit_list=$(git log ${{ steps.get-version.outputs.rearm_last_commit }}..$commit_sha --date=iso-strict --pretty='%H|||%ad|||%s' ./ | base64 -w 0)
+        else
+          commit_list=$(git log -2 --date=iso-strict --pretty='%H|||%ad|||%s' ./ | base64 -w 0)
+        fi        
+        echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
+    - name: Install helm
+      if: ${{env.REARM_DO_BUILD == 'true'}}
+      uses: azure/setup-helm@v4.1.0
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      if: ${{ inputs.registry_type == 'ECR'}}
+      with:
+        aws-access-key-id: ${{ inputs.registry_username }}
+        aws-secret-access-key: ${{ inputs.registry_password }}
+        aws-region: ${{inputs.aws_region}}
+    - name: Publish Helm Chart
+      if: ${{env.REARM_DO_BUILD == 'true'}}
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        case ${{inputs.registry_type}} in
+
+          OCI)
+            helm registry login -u '${{ inputs.registry_username }}' -p '${{ inputs.registry_password }}' ${{inputs.registry_host}}
+            helm package ${{inputs.helm_chart_name}}
+            helm push $(pwd)/*.tgz oci://${{inputs.registry_host}}
+            ;;
+
+          ECR)
+            aws ecr get-login-password \
+              --region ${{inputs.aws_region}} | helm registry login \
+              --username AWS \
+              --password-stdin ${{inputs.registry_host}}
+            helm package ${{inputs.helm_chart_name}}
+            helm push $(pwd)/*.tgz oci://${{inputs.registry_host}}
+            ;;
+
+          CHARTMUSEUM)
+            # publish helm chart on Chartmuseum registry
+            docker run --rm -v $(pwd)/${{inputs.helm_chart_name}}:/apps/helm relizaio/helmpush cm-push /apps/helm ${{inputs.registry_host}} -u '${{ inputs.registry_username }}' -p '${{ inputs.registry_password }}'
+
+            # download and compute sha256 digest for helm chart package tgz
+            docker run --rm -v $(pwd):/apps/helm --entrypoint /bin/sh relizaio/helmpush -c "helm repo add repo ${{inputs.registry_host}} --username '${{ inputs.registry_username }}' --password '${{ inputs.registry_password }}' && helm pull repo/${{inputs.helm_chart_name}} --version ${{ steps.get-version.outputs.rearm_full_version }} -d /apps/helm/"
+            ;;
+        esac
+              
+        sha_digest=$(sha256sum $(pwd)/*.tgz | cut -f 1 -d ' ')
+        echo "shadigest = $sha_digest"    
+  
+        echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
+        echo "rearm_build_status=complete " >> $GITHUB_ENV
+    - name: Submit metadata to ReARM
+      uses: relizaio/rearm-add-release@master
+      if: ${{env.REARM_DO_BUILD == 'true'}}
+      with:
+        rearm_api_id: ${{ inputs.rearm_api_id }}
+        rearm_api_key: ${{ inputs.rearm_api_key }}
+        rearm_api_url: ${{inputs.rearm_api_url}}
+        image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
+        image_digest: sha256:$SHA_DIGEST
+        rearm_full_version: ${{ steps.get-version.outputs.rearm_full_version }}
+        rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
+        rearm_build_status: $rearm_build_status
+        commit_list: $COMMIT_LIST
+        deliverable_type: File
+        rearm_component_id: ${{inputs.rearm_component_id}}
+        enable_sbom: ${{inputs.enable_sbom}}
+        registry_username: ${{inputs.registry_username}}
+        registry_password: ${{inputs.registry_password}}
+        registry_host: ${{inputs.registry_host}}
+        path: ${{inputs.path}}
