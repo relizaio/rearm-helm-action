@@ -153,6 +153,7 @@ runs:
         image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
         image_digest: sha256:$SHA_DIGEST
         rearm_full_version: ${{ steps.get-version.outputs.rearm_full_version }}
+        rearm_short_version: ${{ steps.get-version.outputs.rearm_short_version }}
         rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
         rearm_build_status: $rearm_build_status
         commit_list: $COMMIT_LIST
