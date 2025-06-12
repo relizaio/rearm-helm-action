@@ -48,6 +48,10 @@ inputs:
     required: false
     default: 'false'
     description: Generates SBOM and stores it along with the artifact
+  enable_public_cosign_sigstore:
+    required: false
+    default: 'false'
+    description: "Sign SBOMs using public sigstore via cosign"
 runs:
   using: "composite"
   steps:
@@ -167,3 +171,4 @@ runs:
         registry_password: ${{inputs.registry_password}}
         registry_host: ${{inputs.registry_host}}
         path: ${{inputs.path}}
+        enable_public_cosign_sigstore: {{inputs.enable_public_cosign_sigstore}}
