@@ -57,15 +57,15 @@ runs:
   steps:
     - id: setup-rearm
       name: setup-rearm
-      uses: relizaio/setup-rearm-cli-action@main
+      uses: relizaio/setup-rearm-cli-action@4cf6087e5ba79bcd1be9ffffcda853fbf2207ad6 # v1.0.0
       with: 
-        version: 25.03.2
+        version: 25.07.1
     - name: Display rearm version
       shell: bash
       run: rearm version
     - id: get-version
       name: Get Version
-      uses: relizaio/rearm-get-version@main
+      uses: relizaio/rearm-get-version@2acd00ef588ea9ac01f5111e5f8865a599ad05c8 # v1.0.0
       with: 
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -103,11 +103,11 @@ runs:
         echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
     - name: Install helm
       if: ${{env.REARM_DO_BUILD == 'true'}}
-      uses: azure/setup-helm@v4.3.0
+      uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
       with:
         version: '3.17.2'
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
       if: ${{ inputs.registry_type == 'ECR'}}
       with:
         aws-access-key-id: ${{ inputs.registry_username }}
@@ -150,7 +150,7 @@ runs:
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
         echo "rearm_build_status=DRAFT " >> $GITHUB_ENV
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@main
+      uses: relizaio/rearm-add-release@07e1ed5a253548ce54fe5fb7e146e1a46c5f9360 # v1.1.0
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
