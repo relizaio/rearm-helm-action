@@ -98,7 +98,7 @@ runs:
         then
           commit_list=$(git log ${{ steps.get-version.outputs.rearm_last_commit }}..$commit_sha --date=iso-strict --pretty='%H|||%ad|||%s' ./ | base64 -w 0)
         else
-          commit_list=$(git log -2 --date=iso-strict --pretty='%H|||%ad|||%s' ./ | base64 -w 0)
+          commit_list=$(git log -2 --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0)
         fi        
         echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
     - name: Install helm
@@ -150,7 +150,7 @@ runs:
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
         echo "rearm_build_status=DRAFT " >> $GITHUB_ENV
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@07e1ed5a253548ce54fe5fb7e146e1a46c5f9360 # v1.1.0
+      uses: relizaio/rearm-add-release@2f1221baf008a7061c9dd604269ce22f29cb5c7b # v1.1.1
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
