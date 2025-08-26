@@ -172,3 +172,4 @@ runs:
         registry_host: ${{inputs.registry_host}}
         path: ${{inputs.path}}
         enable_public_cosign_sigstore: {{inputs.enable_public_cosign_sigstore}}
+        finalize_release: "true"
