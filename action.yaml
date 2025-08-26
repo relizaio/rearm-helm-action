@@ -150,7 +150,7 @@ runs:
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
         echo "rearm_build_status=DRAFT " >> $GITHUB_ENV
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@f79bcf4636f51bf20b2a457758ec9aeacedd2b4c # v1.2.0
+      uses: relizaio/rearm-add-release@fdd4b0f92f85d57dff4cde0beff8a6e8982d25b8 # v1.3.0
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
