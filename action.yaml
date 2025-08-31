@@ -152,7 +152,7 @@ runs:
         echo "shadigest = $sha_digest"    
   
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
-        echo "rearm_build_lifecycle=${{inputs.successful_build_lifecycle}} " >> $GITHUB_ENV
+        echo "rearm_build_lifecycle=${{inputs.successful_build_lifecycle}}" >> $GITHUB_ENV
     - name: Login to other Docker Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
       if: ${{inputs.enable_public_cosign_sigstore == 'true'}}
