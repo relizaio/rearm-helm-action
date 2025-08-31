@@ -29,7 +29,7 @@ inputs:
   path:
     description: "Path to the relative to root of the repo (default is '.')"
     required: false
-    default: .
+    default: "."
   ci_metadata:
     description: "Metadata for CI run, (Optional - default is GitHub)"
     required: false
@@ -157,12 +157,12 @@ runs:
         rearm_api_key: ${{ inputs.rearm_api_key }}
         rearm_api_url: ${{inputs.rearm_api_url}}
         image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
-        image_digest: sha256:$SHA_DIGEST
+        image_digest: "sha256:${{ env.SHA_DIGEST }}"
         rearm_full_version: ${{ steps.get-version.outputs.rearm_full_version }}
         rearm_short_version: ${{ steps.get-version.outputs.rearm_short_version }}
         rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
-        rearm_build_status: $rearm_build_status
-        commit_list: $COMMIT_LIST
+        rearm_build_status: "${{ env.rearm_build_status }}"
+        commit_list: "${{ env.COMMIT_LIST }}"
         deliverable_type: FILE
         rearm_component_id: ${{inputs.rearm_component_id}}
         enable_sbom: ${{inputs.enable_sbom}}
@@ -171,5 +171,5 @@ runs:
         registry_password: ${{inputs.registry_password}}
         registry_host: ${{inputs.registry_host}}
         path: ${{inputs.path}}
-        enable_public_cosign_sigstore: {{inputs.enable_public_cosign_sigstore}}
+        enable_public_cosign_sigstore: ${{inputs.enable_public_cosign_sigstore}}
         finalize_release: "true"
