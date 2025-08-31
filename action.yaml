@@ -52,6 +52,10 @@ inputs:
     required: false
     default: 'false'
     description: "Sign SBOMs using public sigstore via cosign"
+  successful_build_lifecycle:
+    required: false
+    default: 'ASSEMBLED'
+    description: "Status on build success to be set on ReARM (DRAFT or ASSEMBLED)"
 runs:
   using: "composite"
   steps:
@@ -75,7 +79,7 @@ runs:
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
       shell: bash
       run: |
-        echo "rearm_build_status=rejected" >> $GITHUB_ENV
+        echo "rearm_build_lifecycle=REJECTED" >> $GITHUB_ENV
         echo "REARM_DO_BUILD=${{ steps.get-version.outputs.REARM_DO_BUILD}}" >> $GITHUB_ENV
     - name: Build and push Helm Chart to Registry
       shell: bash
@@ -148,7 +152,7 @@ runs:
         echo "shadigest = $sha_digest"    
   
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
-        echo "rearm_build_status=DRAFT " >> $GITHUB_ENV
+        echo "rearm_build_lifecycle=${{inputs.successful_build_lifecycle}} " >> $GITHUB_ENV
     - name: Login to other Docker Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
       if: ${{inputs.enable_public_cosign_sigstore == 'true'}}
@@ -168,7 +172,7 @@ runs:
         rearm_full_version: ${{ steps.get-version.outputs.rearm_full_version }}
         rearm_short_version: ${{ steps.get-version.outputs.rearm_short_version }}
         rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
-        rearm_build_status: "${{ env.rearm_build_status }}"
+        rearm_build_status: "${{ env.rearm_build_lifecycle }}"
         commit_list: "${{ env.COMMIT_LIST }}"
         deliverable_type: FILE
         rearm_component_id: ${{inputs.rearm_component_id}}
