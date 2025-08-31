@@ -149,6 +149,13 @@ runs:
   
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
         echo "rearm_build_status=DRAFT " >> $GITHUB_ENV
+    - name: Login to other Docker Registry
+      uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+      if: ${{inputs.enable_public_cosign_sigstore == 'true'}}
+      with:
+        registry: ${{inputs.registry_host}}
+        username: ${{inputs.registry_username}}
+        password: ${{inputs.registry_password}}
     - name: Submit metadata to ReARM
       uses: relizaio/rearm-add-release@fdd4b0f92f85d57dff4cde0beff8a6e8982d25b8 # v1.3.0
       if: ${{env.REARM_DO_BUILD == 'true'}}
