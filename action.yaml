@@ -161,7 +161,7 @@ runs:
         username: ${{inputs.registry_username}}
         password: ${{inputs.registry_password}}
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@e4fa1f0a4fe561f59ba3abaa197c1bc5ad5aaea3 # v1.3.1
+      uses: relizaio/rearm-add-release@c05a92f7710b303de870fb72b86db93f0cf8dfbf # v1.3.1
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
