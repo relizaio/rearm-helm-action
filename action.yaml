@@ -61,15 +61,15 @@ runs:
   steps:
     - id: setup-rearm
       name: setup-rearm
-      uses: relizaio/setup-rearm-cli-action@4cf6087e5ba79bcd1be9ffffcda853fbf2207ad6 # v1.0.0
+      uses: relizaio/setup-rearm-cli-action@c2a544105e7f1572057cbe437fae410d585a240b # v1.1.0
       with: 
-        version: 25.08.4
+        version: 25.10.2
     - name: Display rearm version
       shell: bash
       run: rearm version
     - id: get-version
       name: Get Version
-      uses: relizaio/rearm-get-version@2acd00ef588ea9ac01f5111e5f8865a599ad05c8 # v1.0.0
+      uses: relizaio/rearm-get-version@4a9be1ed7056054889e4a9c72d7670647fd975bf # v1.1.0
       with: 
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -161,7 +161,7 @@ runs:
         username: ${{inputs.registry_username}}
         password: ${{inputs.registry_password}}
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@c05a92f7710b303de870fb72b86db93f0cf8dfbf # v1.3.1
+      uses: relizaio/rearm-add-release@e7445a2fbded05d525f1cf6935444278b71ac6d1 # v1.4.1
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
@@ -184,3 +184,7 @@ runs:
         path: ${{inputs.path}}
         enable_public_cosign_sigstore: ${{inputs.enable_public_cosign_sigstore}}
         finalize_release: "true"
+post:
+  shell: bash
+  run: |
+    rm -rf /tmp/reliza/*
