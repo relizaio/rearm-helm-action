@@ -56,14 +56,28 @@ inputs:
     required: false
     default: 'ASSEMBLED'
     description: "Status on build success to be set on ReARM (DRAFT or ASSEMBLED)"
+  enable_securesbom:
+    required: false
+    default: 'false'
+    description: "Enable SecureSBOM by ShiftLeftCyber signing of SBOMs"
+  securesbom_pub_key_id:
+    required: false
+    default: ''
+    description: "Public key id to sign with SecureSBOM by ShiftLeftCyber"
+  securesbom_host:
+    required: false
+    default: ''
+    description: "SecureSBOM (by ShiftLeftCyber) host"
+  securesbom_api_key:
+    required: false
+    default: ''
+    description: "SecureSBOM (by ShiftLeftCyber) API key"
 runs:
   using: "composite"
   steps:
     - id: setup-rearm
       name: setup-rearm
-      uses: relizaio/setup-rearm-cli-action@c2a544105e7f1572057cbe437fae410d585a240b # v1.1.0
-      with: 
-        version: 25.10.2
+      uses: relizaio/setup-rearm-cli-action@07bb6a8f7bffd32fb2d063e66f73980806459de0 # v1.2.0
     - name: Display rearm version
       shell: bash
       run: rearm version
@@ -161,7 +175,7 @@ runs:
         username: ${{inputs.registry_username}}
         password: ${{inputs.registry_password}}
     - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@e7445a2fbded05d525f1cf6935444278b71ac6d1 # v1.4.1
+      uses: relizaio/rearm-add-release@15209f2bfaed678f0ddcaacb67b85b5adcf51f47 # v1.5.0
       if: ${{env.REARM_DO_BUILD == 'true'}}
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
@@ -184,6 +198,10 @@ runs:
         path: ${{inputs.path}}
         enable_public_cosign_sigstore: ${{inputs.enable_public_cosign_sigstore}}
         finalize_release: "true"
+        enable_securesbom: ${{inputs.enable_securesbom}}
+        securesbom_pub_key_id: ${{inputs.securesbom_pub_key_id}}
+        securesbom_host: ${{inputs.securesbom_host}}
+        securesbom_api_key: ${{inputs.securesbom_api_key}}
 post:
   shell: bash
   run: |
