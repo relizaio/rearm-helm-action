@@ -134,6 +134,8 @@ runs:
       shell: bash
       run: |
         echo "pwd = $(pwd)"
+        ls -lh
+        ls -lh ../
         cd ..
         case ${{inputs.registry_type}} in
 
