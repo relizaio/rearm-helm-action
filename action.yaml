@@ -133,6 +133,7 @@ runs:
       if: ${{env.REARM_DO_BUILD == 'true'}}
       shell: bash
       run: |
+        cd ..
         case ${{inputs.registry_type}} in
 
           OCI)
