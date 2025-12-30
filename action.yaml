@@ -77,24 +77,23 @@ runs:
   steps:
     - id: setup-rearm
       name: setup-rearm
-      uses: relizaio/setup-rearm-cli-action@c13e9de63cca5fdc18c72a7cded3e6a27d041d13 # v1.2.1
+      uses: relizaio/rearm-actions/setup-cli@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
     - name: Display rearm version
       shell: bash
       run: rearm version
-    - id: get-version
-      name: Get Version
-      uses: relizaio/rearm-get-version@4a9be1ed7056054889e4a9c72d7670647fd975bf # v1.1.0
+    - id: init
+      name: Initialize ReARM Flow
+      uses: relizaio/rearm-actions/initialize@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
       with: 
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
         rearm_api_url: ${{inputs.rearm_api_url}}
-        path: ${{inputs.path}}/${{inputs.helm_chart_name}}
-        rearm_component_id: ${{inputs.rearm_component_id}}
+        repo_path: ${{inputs.path}}/${{inputs.helm_chart_name}}
+        component: ${{inputs.rearm_component_id}}
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
       shell: bash
       run: |
-        echo "rearm_build_lifecycle=REJECTED" >> $GITHUB_ENV
-        echo "REARM_DO_BUILD=${{ steps.get-version.outputs.REARM_DO_BUILD}}" >> $GITHUB_ENV
+        echo "REARM_BUILD_LIFECYCLE=REJECTED" >> $GITHUB_ENV
     - name: Build and push Helm Chart to Registry
       shell: bash
       if: ${{env.REARM_DO_BUILD == 'true'}}
@@ -166,7 +165,7 @@ runs:
         echo "shadigest = $sha_digest"    
   
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
-        echo "rearm_build_lifecycle=${{inputs.successful_build_lifecycle}}" >> $GITHUB_ENV
+        echo "REARM_BUILD_LIFECYCLE=${{inputs.successful_build_lifecycle}}" >> $GITHUB_ENV
     - name: Login to other Docker Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
       if: ${{inputs.enable_public_cosign_sigstore == 'true'}}
@@ -174,34 +173,47 @@ runs:
         registry: ${{inputs.registry_host}}
         username: ${{inputs.registry_username}}
         password: ${{inputs.registry_password}}
-    - name: Submit metadata to ReARM
-      uses: relizaio/rearm-add-release@d40cd001b969b385e0f5ad34e0f770d93df3a179 # v1.5.1
-      if: ${{env.REARM_DO_BUILD == 'true'}}
+    - name: Generate and sign SBOMs
+      if: steps.init.outputs.do_build == 'true'
+      id: sbom
+      uses: relizaio/rearm-actions/sbom-sign-scan@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
+      with:
+        image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
+        image_digest: "sha256:${{ env.SHA_DIGEST }}"
+        rearm_short_version: ${{ steps.init.outputs.short_version }}
+        rearm_full_version: ${{ steps.init.outputs.full_version }}
+        enable_sbom: ${{inputs.enable_sbom}}
+        source_code_sbom_type: helm
+        registry_username: ${{inputs.registry_username}}
+        registry_password: ${{inputs.registry_password}}
+        registry_host: ${{inputs.registry_host}}
+        repo_path: ${{inputs.path}}
+        enable_public_cosign_sigstore: ${{inputs.enable_public_cosign_sigstore}}
+        deliverable_type: FILE
+    - name: Submit metadata to ReARM and Finalize
+      if: steps.init.outputs.do_build == 'true'
+      uses: relizaio/rearm-actions/finalize@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
         rearm_api_url: ${{inputs.rearm_api_url}}
         image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
         image_digest: "sha256:${{ env.SHA_DIGEST }}"
-        rearm_full_version: ${{ steps.get-version.outputs.rearm_full_version }}
-        rearm_short_version: ${{ steps.get-version.outputs.rearm_short_version }}
-        rearm_build_start: ${{ steps.get-version.outputs.rearm_build_start }}
-        rearm_build_status: "${{ env.rearm_build_lifecycle }}"
-        commit_list: "${{ env.COMMIT_LIST }}"
-        deliverable_type: FILE
-        rearm_component_id: ${{inputs.rearm_component_id}}
-        enable_sbom: ${{inputs.enable_sbom}}
-        source_code_sbom_type: helm
-        registry_username: ${{inputs.registry_username}}
-        registry_password: ${{inputs.registry_password}}
-        registry_host: ${{inputs.registry_host}}
-        path: ${{inputs.path}}
-        enable_public_cosign_sigstore: ${{inputs.enable_public_cosign_sigstore}}
+        rearm_build_start: ${{ steps.init.outputs.build_start }}
+        rearm_short_version: ${{ steps.init.outputs.short_version }}
+        rearm_full_version: ${{ steps.init.outputs.full_version }}
+        rearm_build_lifecycle: ${{env.REARM_BUILD_LIFECYCLE}}
+        commit_list: ${{ steps.init.outputs.commit_list }}
+        sce_commit: ${{ steps.init.outputs.sce_commit }}
+        sce_commit_message: ${{ steps.init.outputs.sce_commit_message }}
+        sce_commit_date: ${{ steps.init.outputs.sce_commit_date }}
+        sce_vcs_uri: ${{ steps.init.outputs.sce_vcs_uri }}
+        scearts: ${{ steps.sbom.outputs.scearts }}
+        purl: ${{ steps.sbom.outputs.purl }}
+        repo_path: ${{inputs.path}}
         finalize_release: "true"
-        enable_securesbom: ${{inputs.enable_securesbom}}
-        securesbom_pub_key_id: ${{inputs.securesbom_pub_key_id}}
-        securesbom_host: ${{inputs.securesbom_host}}
-        securesbom_api_key: ${{inputs.securesbom_api_key}}
+        component: ${{inputs.rearm_component_id}}
+        deliverable_type: FILE
 post:
   shell: bash
   run: |
