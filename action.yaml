@@ -144,11 +144,13 @@ runs:
         echo "pwd = $(pwd)"
         ls -lh
         ls -lh ../
-        cd ${{inputs.path}}
+        cd ${{ inputs.path }}
         case ${{inputs.registry_type}} in
 
           OCI)
             helm registry login -u '${{ inputs.registry_username }}' -p '${{ inputs.registry_password }}' ${{inputs.registry_host}}
+            ls -lh
+            cat ${{inputs.helm_chart_name}}/Chart.yaml
             helm package ${{inputs.helm_chart_name}}
             helm push $(pwd)/*.tgz oci://${{inputs.registry_host}}
             ;;
