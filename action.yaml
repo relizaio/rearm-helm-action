@@ -75,6 +75,10 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Checkout
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        fetch-depth: 0
     - id: setup-rearm
       name: setup-rearm
       uses: relizaio/rearm-actions/setup-cli@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
@@ -99,6 +103,9 @@ runs:
       if: ${{env.REARM_DO_BUILD == 'true'}}
       continue-on-error: true
       run: |
+        echo "pwd = $(pwd)"
+        ls -lh
+        ls -lh ../
         cd ${{inputs.path}}
         # update version on the chart
         sed -i "/^version: /s/.*/version: ${{ steps.get-version.outputs.rearm_full_version }}/" ${{inputs.helm_chart_name}}/Chart.yaml
