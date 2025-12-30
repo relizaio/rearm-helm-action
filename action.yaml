@@ -99,13 +99,14 @@ runs:
       if: ${{env.REARM_DO_BUILD == 'true'}}
       continue-on-error: true
       run: |
+        cd ${{inputs.path}}
         # update version on the chart
-        sed -i "/^version: /s/.*/version: ${{ steps.get-version.outputs.rearm_full_version }}/" Chart.yaml
+        sed -i "/^version: /s/.*/version: ${{ steps.get-version.outputs.rearm_full_version }}/" ${{inputs.helm_chart_name}}/Chart.yaml
         
         # git commit and update
         git config --global user.name 'reliza-auto'
         git config --global user.email 'info@reliza.io'
-        git add Chart.yaml
+        git add ${{inputs.helm_chart_name}}/Chart.yaml
         git commit -m "chore: bump helm chart version to ${{ steps.get-version.outputs.rearm_full_version }} [skip ci]"
         git push
         commit_sha=$(git log -1 --pretty='%H')
@@ -136,7 +137,7 @@ runs:
         echo "pwd = $(pwd)"
         ls -lh
         ls -lh ../
-        cd ..
+        cd ${{inputs.path}}
         case ${{inputs.registry_type}} in
 
           OCI)
