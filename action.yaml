@@ -103,7 +103,6 @@ runs:
       if: ${{env.REARM_DO_BUILD == 'true'}}
       continue-on-error: true
       run: |
-        cd ${{inputs.path}}
         # update version on the chart
         sed -i "/^version: /s/.*/version: ${{ steps.init.outputs.full_version }}/" ${{inputs.path}}/Chart.yaml
         
