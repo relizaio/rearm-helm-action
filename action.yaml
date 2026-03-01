@@ -116,9 +116,9 @@ runs:
         
         if [ ! -z "${{ steps.init.outputs.last_commit }}" ]
         then
-          commit_list=$(git log ${{ steps.init.outputs.last_commit }}..$commit_sha --date=iso-strict --pretty='%H|||%ad|||%s' ./ | base64 -w 0)
+          commit_list=$(git log ${{ steps.init.outputs.last_commit }}..$commit_sha --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "${{inputs.path}}" | base64 -w 0)
         else
-          commit_list=$(git log -2 --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0)
+          commit_list=$(git log -2 --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "${{inputs.path}}" | base64 -w 0)
         fi        
         echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
         echo "SCE_COMMIT=$commit_sha" >> $GITHUB_ENV
