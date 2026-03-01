@@ -121,6 +121,9 @@ runs:
           commit_list=$(git log -2 --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0)
         fi        
         echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
+        echo "SCE_COMMIT=$commit_sha" >> $GITHUB_ENV
+        echo "SCE_COMMIT_MESSAGE=$(git log -1 --pretty='%s' $commit_sha)" >> $GITHUB_ENV
+        echo "SCE_COMMIT_DATE=$(git log -1 --date=iso-strict --pretty='%ad' $commit_sha)" >> $GITHUB_ENV
     - name: Install helm
       if: ${{env.REARM_DO_BUILD == 'true'}}
       uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
@@ -205,10 +208,10 @@ runs:
         rearm_short_version: ${{ steps.init.outputs.short_version }}
         rearm_full_version: ${{ steps.init.outputs.full_version }}
         rearm_build_lifecycle: ${{env.REARM_BUILD_LIFECYCLE}}
-        commit_list: ${{ steps.init.outputs.commit_list }}
-        sce_commit: ${{ steps.init.outputs.sce_commit }}
-        sce_commit_message: ${{ steps.init.outputs.sce_commit_message }}
-        sce_commit_date: ${{ steps.init.outputs.sce_commit_date }}
+        commit_list: ${{ env.COMMIT_LIST }}
+        sce_commit: ${{ env.SCE_COMMIT }}
+        sce_commit_message: ${{ env.SCE_COMMIT_MESSAGE }}
+        sce_commit_date: ${{ env.SCE_COMMIT_DATE }}
         sce_vcs_uri: ${{ steps.init.outputs.sce_vcs_uri }}
         scearts: ${{ steps.sbom.outputs.scearts }}
         purl: ${{ steps.sbom.outputs.purl }}
