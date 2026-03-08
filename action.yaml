@@ -93,14 +93,6 @@ inputs:
     required: false
     default: 'false'
     description: "Create component if it doesn't exist"
-  create_component_version_schema:
-    required: false
-    default: 'semver'
-    description: "Version schema for created component when it doesn't exist"
-  create_component_branch_version_schema:
-    required: false
-    default: 'Branch.Micro'
-    description: "Version schema for created component branches when component doesn't exist"
   allow_rebuild:
     required: false
     default: 'false'
@@ -128,8 +120,8 @@ runs:
         repo_path: ${{inputs.path}}
         component: ${{inputs.rearm_component_id}}
         create_component: ${{inputs.create_component}}
-        create_component_version_schema: ${{inputs.create_component_version_schema}}
-        create_component_branch_version_schema: ${{inputs.create_component_branch_version_schema}}
+        create_component_version_schema: semver
+        create_component_branch_version_schema: semver
         allow_rebuild: ${{inputs.allow_rebuild}}
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
       shell: bash
