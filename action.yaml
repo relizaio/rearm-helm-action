@@ -89,6 +89,22 @@ inputs:
   rearm_mirror_component_id:
     description: "Component UUID on ReARM Mirror for this release if org-wide key is used and not relying on component mapping"
     required: false
+  create_component:
+    required: false
+    default: 'false'
+    description: "Create component if it doesn't exist"
+  create_component_version_schema:
+    required: false
+    default: 'semver'
+    description: "Version schema for created component when it doesn't exist"
+  create_component_branch_version_schema:
+    required: false
+    default: 'Branch.Micro'
+    description: "Version schema for created component branches when component doesn't exist"
+  allow_rebuild:
+    required: false
+    default: 'false'
+    description: "Allow rebuilding of existing component releases"
 runs:
   using: "composite"
   steps:
@@ -111,6 +127,10 @@ runs:
         rearm_api_url: ${{inputs.rearm_api_url}}
         repo_path: ${{inputs.path}}
         component: ${{inputs.rearm_component_id}}
+        create_component: ${{inputs.create_component}}
+        create_component_version_schema: ${{inputs.create_component_version_schema}}
+        create_component_branch_version_schema: ${{inputs.create_component_branch_version_schema}}
+        allow_rebuild: ${{inputs.allow_rebuild}}
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
       shell: bash
       run: |
