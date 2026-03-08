@@ -72,6 +72,23 @@ inputs:
     required: false
     default: ''
     description: "SecureSBOM (by ShiftLeftCyber) API key"
+  push_to_rearm_mirror:
+    required: false
+    default: 'false'
+    description: "Push to ReARM mirror"
+  rearm_mirror_api_id:
+    description: "ReARM Mirror API ID"
+    required: true
+  rearm_mirror_api_key:
+    description: "ReARM Mirror API KEY"
+    required: true
+  rearm_mirror_api_url:
+    description: "ReARM Mirror API URL"
+    required: false
+    default: 'https://demo.rearmhq.com'
+  rearm_mirror_component_id:
+    description: "Component UUID on ReARM Mirror for this release if org-wide key is used and not relying on component mapping"
+    required: false
 runs:
   using: "composite"
   steps:
@@ -197,7 +214,7 @@ runs:
         deliverable_type: FILE
     - name: Submit metadata to ReARM and Finalize
       if: steps.init.outputs.do_build == 'true'
-      uses: relizaio/rearm-actions/finalize@f2950b85c870a96a55994a92bdecebe445916bd4 # v1.0.0
+      uses: relizaio/rearm-actions/finalize@8d66e201a286c89a57b0f601f74ca0a021f56a71 # v1.1.0
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -219,6 +236,29 @@ runs:
         finalize_release: "true"
         component: ${{inputs.rearm_component_id}}
         deliverable_type: FILE
+    - name: Submit metadata to ReARM Mirror and Finalize
+      if: ${{inputs.push_to_rearm_mirror == 'true' && steps.init.outputs.do_build == 'true'}}
+      uses: relizaio/rearm-actions/finalize@8d66e201a286c89a57b0f601f74ca0a021f56a71 # v1.1.0
+      with:
+        rearm_api_id: ${{ inputs.rearm_mirror_api_id }}
+        rearm_api_key: ${{ inputs.rearm_mirror_api_key }}
+        rearm_api_url: ${{inputs.rearm_mirror_api_url}}
+        image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
+        image_digest: "sha256:${{ env.SHA_DIGEST }}"
+        rearm_build_start: ${{ steps.init.outputs.build_start }}
+        rearm_short_version: ${{ steps.init.outputs.short_version }}
+        rearm_full_version: ${{ steps.init.outputs.full_version }}
+        rearm_build_lifecycle: ${{env.REARM_BUILD_LIFECYCLE}}
+        commit_list: ${{ env.COMMIT_LIST }}
+        sce_commit: ${{ env.SCE_COMMIT }}
+        sce_commit_message: ${{ env.SCE_COMMIT_MESSAGE }}
+        sce_commit_date: ${{ env.SCE_COMMIT_DATE }}
+        sce_vcs_uri: ${{ steps.init.outputs.sce_vcs_uri }}
+        scearts: ${{ steps.sbom.outputs.scearts }}
+        purl: ${{ steps.sbom.outputs.purl }}
+        repo_path: ${{inputs.path}}
+        finalize_release: "true"
+        component: ${{inputs.rearm_mirror_component_id}}
 post:
   shell: bash
   run: |
