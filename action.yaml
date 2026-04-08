@@ -97,6 +97,14 @@ inputs:
     required: false
     default: 'false'
     description: "Allow rebuilding of existing component releases"
+  git_user_name:
+    required: false
+    default: 'reliza-auto'
+    description: "Git user name for version bump commit"
+  git_user_email:
+    required: false
+    default: 'info@reliza.io'
+    description: "Git user email for version bump commit"
 runs:
   using: "composite"
   steps:
@@ -136,9 +144,8 @@ runs:
         sed -i "/^version: /s/.*/version: ${{ steps.init.outputs.full_version }}/" ${{inputs.path}}/Chart.yaml
         
         # git commit and update
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-        git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+        git config --global user.name '${{ inputs.git_user_name }}'
+        git config --global user.email '${{ inputs.git_user_email }}'
         git add ${{inputs.path}}/Chart.yaml
         git commit -m "chore: bump helm chart version to ${{ steps.init.outputs.full_version }} [skip ci]"
         git push
