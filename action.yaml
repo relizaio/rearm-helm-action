@@ -105,6 +105,10 @@ inputs:
     required: false
     default: 'info@reliza.io'
     description: "Git user email for version bump commit"
+  limit_to_branches:
+    required: false
+    default: ''
+    description: "Comma-separated list of branches to build on (e.g. 'main,develop'). If empty, all branches are built."
 runs:
   using: "composite"
   steps:
@@ -112,16 +116,45 @@ runs:
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
         fetch-depth: 0
+    - name: Check branch against limit_to_branches
+      shell: bash
+      run: |
+        limit='${{ inputs.limit_to_branches }}'
+        current_branch="${GITHUB_REF_NAME}"
+        if [ -z "$limit" ]; then
+          echo "REARM_BRANCH_ALLOWED=true" >> $GITHUB_ENV
+          echo "No branch limit set, proceeding with branch '$current_branch'."
+        else
+          allowed=false
+          IFS=',' read -ra BRANCHES <<< "$limit"
+          for b in "${BRANCHES[@]}"; do
+            trimmed=$(echo "$b" | xargs)
+            if [ "$trimmed" = "$current_branch" ]; then
+              allowed=true
+              break
+            fi
+          done
+          if [ "$allowed" = "true" ]; then
+            echo "REARM_BRANCH_ALLOWED=true" >> $GITHUB_ENV
+            echo "Branch '$current_branch' is in limit_to_branches, proceeding."
+          else
+            echo "REARM_BRANCH_ALLOWED=false" >> $GITHUB_ENV
+            echo "Branch '$current_branch' is not in limit_to_branches ('$limit'), skipping build."
+          fi
+        fi
     - id: setup-rearm
       name: setup-rearm
+      if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       uses: relizaio/rearm-actions/setup-cli@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
     - name: Display rearm version
+      if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       shell: bash
       run: rearm version
     - id: init
       name: Initialize ReARM Flow
+      if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       uses: relizaio/rearm-actions/initialize@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
-      with: 
+      with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
         rearm_api_url: ${{inputs.rearm_api_url}}
@@ -132,6 +165,7 @@ runs:
         create_component_branch_version_schema: semver
         allow_rebuild: ${{inputs.allow_rebuild}}
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
+      if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       shell: bash
       run: |
         echo "REARM_BUILD_LIFECYCLE=REJECTED" >> $GITHUB_ENV
@@ -168,7 +202,7 @@ runs:
         version: '3.17.2'
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-      if: ${{ inputs.registry_type == 'ECR'}}
+      if: ${{ inputs.registry_type == 'ECR' && env.REARM_DO_BUILD == 'true' }}
       with:
         aws-access-key-id: ${{ inputs.registry_username }}
         aws-secret-access-key: ${{ inputs.registry_password }}
@@ -210,7 +244,7 @@ runs:
         echo "REARM_BUILD_LIFECYCLE=${{inputs.successful_build_lifecycle}}" >> $GITHUB_ENV
     - name: Login to other Docker Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
-      if: ${{inputs.enable_public_cosign_sigstore == 'true'}}
+      if: ${{ inputs.enable_public_cosign_sigstore == 'true' && env.REARM_DO_BUILD == 'true' }}
       with:
         registry: ${{inputs.registry_host}}
         username: ${{inputs.registry_username}}
