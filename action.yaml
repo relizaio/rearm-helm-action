@@ -145,7 +145,7 @@ runs:
     - id: setup-rearm
       name: setup-rearm
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
-      uses: relizaio/rearm-actions/setup-cli@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
+      uses: relizaio/rearm-actions/setup-cli@4322f5405de978acfadbfffc986a22527172e779 # v1.4.0
     - name: Display rearm version
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       shell: bash
@@ -153,7 +153,7 @@ runs:
     - id: init
       name: Initialize ReARM Flow
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
-      uses: relizaio/rearm-actions/initialize@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
+      uses: relizaio/rearm-actions/initialize@4322f5405de978acfadbfffc986a22527172e779 # v1.4.0
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -164,6 +164,7 @@ runs:
         create_component_version_schema: semver
         create_component_branch_version_schema: semver
         allow_rebuild: ${{inputs.allow_rebuild}}
+        enable_invisible_char_check: true
     - name: Instantiate Lifecycle as Rejected to handle possible build failure
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       shell: bash
@@ -252,7 +253,7 @@ runs:
     - name: Generate and sign SBOMs
       if: steps.init.outputs.do_build == 'true'
       id: sbom
-      uses: relizaio/rearm-actions/sbom-sign-scan@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
+      uses: relizaio/rearm-actions/sbom-sign-scan@4322f5405de978acfadbfffc986a22527172e779 # v1.4.0
       with:
         image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
         image_digest: "sha256:${{ env.SHA_DIGEST }}"
@@ -268,7 +269,7 @@ runs:
         deliverable_type: FILE
     - name: Submit metadata to ReARM and Finalize
       if: steps.init.outputs.do_build == 'true'
-      uses: relizaio/rearm-actions/finalize@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
+      uses: relizaio/rearm-actions/finalize@4322f5405de978acfadbfffc986a22527172e779 # v1.4.0
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -292,7 +293,7 @@ runs:
         deliverable_type: FILE
     - name: Submit metadata to ReARM Mirror and Finalize
       if: ${{inputs.push_to_rearm_mirror == 'true' && steps.init.outputs.do_build == 'true'}}
-      uses: relizaio/rearm-actions/finalize@3545b39e587d69a2ca339e3c4fee2f0fd67dd18b # v1.3.1
+      uses: relizaio/rearm-actions/finalize@4322f5405de978acfadbfffc986a22527172e779 # v1.4.0
       with:
         rearm_api_id: ${{ inputs.rearm_mirror_api_id }}
         rearm_api_key: ${{ inputs.rearm_mirror_api_key }}
