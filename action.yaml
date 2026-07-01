@@ -112,14 +112,18 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout
+    # persist-credentials stays on: the "Build and push Helm Chart" step pushes a
+    # version-bump commit with the checkout token, so credentials must persist.
+    - name: Checkout # zizmor: ignore[artipacked]
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
         fetch-depth: 0
     - name: Check branch against limit_to_branches
       shell: bash
+      env:
+        INPUT_LIMIT_TO_BRANCHES: ${{ inputs.limit_to_branches }}
       run: |
-        limit='${{ inputs.limit_to_branches }}'
+        limit="$INPUT_LIMIT_TO_BRANCHES"
         current_branch="${GITHUB_REF_NAME}"
         if [ -z "$limit" ]; then
           echo "REARM_BRANCH_ALLOWED=true" >> $GITHUB_ENV
@@ -174,24 +178,32 @@ runs:
       shell: bash
       if: ${{env.REARM_DO_BUILD == 'true'}}
       continue-on-error: true
-      run: |
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_GIT_USER_NAME: ${{ inputs.git_user_name }}
+        INPUT_GIT_USER_EMAIL: ${{ inputs.git_user_email }}
+        INPUT_FULL_VERSION: ${{ steps.init.outputs.full_version }}
+        INPUT_LAST_COMMIT: ${{ steps.init.outputs.last_commit }}
+      # GITHUB_ENV writes below are controlled single-line values (base64 commit list,
+      # git sha/date, self-authored commit subject) — no newline-injection surface.
+      run: | # zizmor: ignore[github-env]
         # update version on the chart
-        sed -i "/^version: /s/.*/version: ${{ steps.init.outputs.full_version }}/" ${{inputs.path}}/Chart.yaml
-        
+        sed -i "/^version: /s/.*/version: $INPUT_FULL_VERSION/" "$INPUT_PATH/Chart.yaml"
+
         # git commit and update
-        git config --global user.name '${{ inputs.git_user_name }}'
-        git config --global user.email '${{ inputs.git_user_email }}'
-        git add ${{inputs.path}}/Chart.yaml
-        git commit -m "chore: bump helm chart version to ${{ steps.init.outputs.full_version }} [skip ci]"
+        git config --global user.name "$INPUT_GIT_USER_NAME"
+        git config --global user.email "$INPUT_GIT_USER_EMAIL"
+        git add "$INPUT_PATH/Chart.yaml"
+        git commit -m "chore: bump helm chart version to $INPUT_FULL_VERSION [skip ci]"
         git push
         commit_sha=$(git log -1 --pretty='%H')
-        
-        if [ ! -z "${{ steps.init.outputs.last_commit }}" ]
+
+        if [ ! -z "$INPUT_LAST_COMMIT" ]
         then
-          commit_list=$(git log ${{ steps.init.outputs.last_commit }}..$commit_sha --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "${{inputs.path}}" | base64 -w 0)
+          commit_list=$(git log "$INPUT_LAST_COMMIT..$commit_sha" --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "$INPUT_PATH" | base64 -w 0)
         else
-          commit_list=$(git log -2 --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "${{inputs.path}}" | base64 -w 0)
-        fi        
+          commit_list=$(git log -2 --date=iso-strict --pretty="%H|||%ad|||%s|||%an|||%ae" -- "$INPUT_PATH" | base64 -w 0)
+        fi
         echo "COMMIT_LIST=$commit_list " >> $GITHUB_ENV
         echo "SCE_COMMIT=$commit_sha" >> $GITHUB_ENV
         echo "SCE_COMMIT_MESSAGE=$(git log -1 --pretty='%s' $commit_sha)" >> $GITHUB_ENV
@@ -211,38 +223,50 @@ runs:
     - name: Publish Helm Chart
       if: ${{env.REARM_DO_BUILD == 'true'}}
       shell: bash
-      run: |
-        case ${{inputs.registry_type}} in
+      env:
+        INPUT_REGISTRY_TYPE: ${{ inputs.registry_type }}
+        INPUT_REGISTRY_USERNAME: ${{ inputs.registry_username }}
+        INPUT_REGISTRY_PASSWORD: ${{ inputs.registry_password }}
+        INPUT_REGISTRY_HOST: ${{ inputs.registry_host }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_AWS_REGION: ${{ inputs.aws_region }}
+        INPUT_HELM_CHART_NAME: ${{ inputs.helm_chart_name }}
+        INPUT_FULL_VERSION: ${{ steps.init.outputs.full_version }}
+        INPUT_SUCCESSFUL_BUILD_LIFECYCLE: ${{ inputs.successful_build_lifecycle }}
+      # GITHUB_ENV writes below are controlled single-line values (sha256 digest +
+      # lifecycle enum) — no newline-injection surface.
+      run: | # zizmor: ignore[github-env]
+        case "$INPUT_REGISTRY_TYPE" in
 
           OCI)
-            helm registry login -u '${{ inputs.registry_username }}' -p '${{ inputs.registry_password }}' ${{inputs.registry_host}}
-            helm package ${{inputs.path}}
-            helm push $(pwd)/*.tgz oci://${{inputs.registry_host}}
+            helm registry login -u "$INPUT_REGISTRY_USERNAME" -p "$INPUT_REGISTRY_PASSWORD" "$INPUT_REGISTRY_HOST"
+            helm package "$INPUT_PATH"
+            helm push "$(pwd)"/*.tgz "oci://$INPUT_REGISTRY_HOST"
             ;;
 
           ECR)
             aws ecr get-login-password \
-              --region ${{inputs.aws_region}} | helm registry login \
+              --region "$INPUT_AWS_REGION" | helm registry login \
               --username AWS \
-              --password-stdin ${{inputs.registry_host}}
-            helm package ${{inputs.path}}
-            helm push $(pwd)/*.tgz oci://${{inputs.registry_host}}
+              --password-stdin "$INPUT_REGISTRY_HOST"
+            helm package "$INPUT_PATH"
+            helm push "$(pwd)"/*.tgz "oci://$INPUT_REGISTRY_HOST"
             ;;
 
           CHARTMUSEUM)
             # publish helm chart on Chartmuseum registry
-            docker run --rm -v $(pwd)/${{inputs.path}}:/apps/helm relizaio/helmpush cm-push /apps/helm ${{inputs.registry_host}} -u '${{ inputs.registry_username }}' -p '${{ inputs.registry_password }}'
+            docker run --rm -v "$(pwd)/$INPUT_PATH:/apps/helm" relizaio/helmpush cm-push /apps/helm "$INPUT_REGISTRY_HOST" -u "$INPUT_REGISTRY_USERNAME" -p "$INPUT_REGISTRY_PASSWORD"
 
             # download and compute sha256 digest for helm chart package tgz
-            docker run --rm -v $(pwd):/apps/helm --entrypoint /bin/sh relizaio/helmpush -c "helm repo add repo ${{inputs.registry_host}} --username '${{ inputs.registry_username }}' --password '${{ inputs.registry_password }}' && helm pull repo/${{inputs.helm_chart_name}} --version ${{ steps.init.outputs.full_version }} -d /apps/helm/"
+            docker run --rm -v "$(pwd):/apps/helm" --entrypoint /bin/sh relizaio/helmpush -c "helm repo add repo $INPUT_REGISTRY_HOST --username '$INPUT_REGISTRY_USERNAME' --password '$INPUT_REGISTRY_PASSWORD' && helm pull repo/$INPUT_HELM_CHART_NAME --version $INPUT_FULL_VERSION -d /apps/helm/"
             ;;
         esac
-              
-        sha_digest=$(sha256sum $(pwd)/*.tgz | cut -f 1 -d ' ')
-        echo "shadigest = $sha_digest"    
-  
+
+        sha_digest=$(sha256sum "$(pwd)"/*.tgz | cut -f 1 -d ' ')
+        echo "shadigest = $sha_digest"
+
         echo "SHA_DIGEST=$sha_digest" >> $GITHUB_ENV
-        echo "REARM_BUILD_LIFECYCLE=${{inputs.successful_build_lifecycle}}" >> $GITHUB_ENV
+        echo "REARM_BUILD_LIFECYCLE=$INPUT_SUCCESSFUL_BUILD_LIFECYCLE" >> $GITHUB_ENV
     - name: Login to other Docker Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
       if: ${{ inputs.enable_public_cosign_sigstore == 'true' && env.REARM_DO_BUILD == 'true' }}
