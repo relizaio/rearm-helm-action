@@ -92,7 +92,7 @@ Instead of an API key, the action can authenticate to ReARM with the identity to
 
 ```yaml
 permissions:
-  contents: read
+  contents: write
   id-token: write
 steps:
 - uses: relizaio/rearm-helm-action@<ref>

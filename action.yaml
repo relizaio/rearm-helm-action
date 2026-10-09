@@ -340,7 +340,6 @@ runs:
         scearts: ${{ steps.sbom.outputs.scearts }}
         purl: ${{ steps.sbom.outputs.purl }}
         repo_path: ${{inputs.path}}
-        finalize_release: "true"
         component: ${{inputs.rearm_component_id}}
         deliverable_type: FILE
     - name: Submit metadata to ReARM Mirror and Finalize
@@ -366,7 +365,6 @@ runs:
         scearts: ${{ steps.sbom.outputs.scearts }}
         purl: ${{ steps.sbom.outputs.purl }}
         repo_path: ${{inputs.path}}
-        finalize_release: "true"
         component: ${{inputs.rearm_mirror_component_id}}
 post:
   shell: bash
