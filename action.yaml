@@ -172,7 +172,7 @@ runs:
     - id: setup-rearm
       name: setup-rearm
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
-      uses: relizaio/rearm-actions/setup-cli@5c53349745efd84fd3516c487cc359c0e0f25519 # v1.9.1
+      uses: relizaio/rearm-actions/setup-cli@10a75c3e0f299675d308e0ee5b22d60c632782c4 # v1.9.1
     - name: Display rearm version
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
       shell: bash
@@ -180,7 +180,7 @@ runs:
     - id: init
       name: Initialize ReARM Flow
       if: ${{ env.REARM_BRANCH_ALLOWED == 'true' }}
-      uses: relizaio/rearm-actions/initialize@5c53349745efd84fd3516c487cc359c0e0f25519 # v1.9.1
+      uses: relizaio/rearm-actions/initialize@10a75c3e0f299675d308e0ee5b22d60c632782c4 # v1.9.1
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -303,7 +303,7 @@ runs:
     - name: Generate and sign SBOMs
       if: steps.init.outputs.do_build == 'true'
       id: sbom
-      uses: relizaio/rearm-actions/sbom-sign-scan@5c53349745efd84fd3516c487cc359c0e0f25519 # v1.9.1
+      uses: relizaio/rearm-actions/sbom-sign-scan@10a75c3e0f299675d308e0ee5b22d60c632782c4 # v1.9.1
       with:
         image_full_name: ${{inputs.registry_host}}/${{inputs.helm_chart_name}}
         image_digest: "sha256:${{ env.SHA_DIGEST }}"
@@ -319,7 +319,7 @@ runs:
         deliverable_type: FILE
     - name: Submit metadata to ReARM and Finalize
       if: steps.init.outputs.do_build == 'true'
-      uses: relizaio/rearm-actions/finalize@5c53349745efd84fd3516c487cc359c0e0f25519 # v1.9.1
+      uses: relizaio/rearm-actions/finalize@10a75c3e0f299675d308e0ee5b22d60c632782c4 # v1.9.1
       with:
         rearm_api_id: ${{ inputs.rearm_api_id }}
         rearm_api_key: ${{ inputs.rearm_api_key }}
@@ -344,7 +344,7 @@ runs:
         deliverable_type: FILE
     - name: Submit metadata to ReARM Mirror and Finalize
       if: ${{inputs.push_to_rearm_mirror == 'true' && steps.init.outputs.do_build == 'true'}}
-      uses: relizaio/rearm-actions/finalize@5c53349745efd84fd3516c487cc359c0e0f25519 # v1.9.1
+      uses: relizaio/rearm-actions/finalize@10a75c3e0f299675d308e0ee5b22d60c632782c4 # v1.9.1
       with:
         rearm_api_id: ${{ inputs.rearm_mirror_api_id }}
         rearm_api_key: ${{ inputs.rearm_mirror_api_key }}
